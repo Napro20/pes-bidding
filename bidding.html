@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Bid Room</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #121212;
+            color: white;
+            margin: 0;
+        }
+
+        h1 {
+            text-align: center;
+            padding: 10px;
+        }
+
+        #main {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .host,
+        .captains {
+            width: 30%;
+        }
+
+        .host h2,
+        .captains h2 {
+            text-align: center;
+        }
+
+        .player-card {
+            width: 100px;
+            height: 120px;
+            margin: 10px auto;
+            border: 2px solid white;
+            cursor: pointer;
+            background-size: cover;
+            background-position: center;
+        }
+
+        #selectedCard {
+            width: 150px;
+            height: 180px;
+            margin: 20px auto;
+            border: 3px solid gold;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .price-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .price-buttons button {
+            padding: 5px 10px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .captain-box {
+            margin-bottom: 15px;
+            border: 1px solid white;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .balance {
+            color: gold;
+        }
+
+        #timer {
+            font-size: 24px;
+            color: orange;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .unsold {
+            text-align: center;
+            color: red;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>🏟️ Bidding Room</h1>
+
+    <div id="main">
+        <!-- Host Section -->
+        <div class="host">
+            <h2>🎮 Host's Player Bucket</h2>
+            <div id="hostBucket"></div>
+        </div>
+
+        <!-- Middle Selected Card + Timer -->
+        <div>
+            <div id="selectedCard"></div>
+            <div id="timer">Timer: --</div>
+            <div id="priceInfo" style="text-align:center; margin-top:10px;"></div>
+            <div id="unsoldMsg" class="unsold"></div>
+        </div>
+
+        <!-- Captains -->
+        <div class="captains">
+            <h2>👑 Captains</h2>
+            <div id="captainsList"></div>
+        </div>
+    </div>
+
+    <script>
+        // Sample Players in Host's Bucket
+        const hostPlayers = [
+            { id: 1, img: 'https://via.placeholder.com/100x120?text=P1' },
+            { id: 2, img: 'https://via.placeholder.com/100x120?text=P2' },
+            { id: 3, img: 'https://via.placeholder.com/100x120?text=P3' }
+        ];
+
+        // Sample Captains
+        const captains = [
+            { id: 1, name: 'Captain A', balance: 200 },
+            { id: 2, name: 'Captain B', balance: 200 },
+            { id: 3, name: 'Captain C', balance: 200 }
+        ];
+
+        let selectedPlayer = null;
+        let currentBid = 0;
+        let currentBidder = null;
+        let countdown = null;
+        let bidTimeout = null;
+
+        const priceOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+        const hostBucket = document.getElementById('hostBucket');
+        const captainsList = document.getElementById('captainsList');
+        const selectedCard = document.getElementById('selectedCard');
+        const timer = document.getElementById('timer');
+        const priceInfo = document.getElementById('priceInfo');
+        const unsoldMsg = document.getElementById('unsoldMsg');
+
+        function renderHostPlayers() {
+            hostBucket.innerHTML = '';
+            hostPlayers.forEach(player => {
+                const div = document.createElement('div');
+                div.className = 'player-card';
+                div.style.backgroundImage = `url(${player.img})`;
+                div.onclick = () => startBidding(player);
+                hostBucket.appendChild(div);
+            });
+        }
+
+        function renderCaptains() {
+            captainsList.innerHTML = '';
+            captains.forEach(captain => {
+                const box = document.createElement('div');
+                box.className = 'captain-box';
+                box.id = `captain-${captain.id}`;
+
+                box.innerHTML = `
+        <strong>${captain.name}</strong><br>
+        💰 <span class="balance" id="balance-${captain.id}">${captain.balance}</span><br>
+        <div class="price-buttons" id="buttons-${captain.id}"></div>
+      `;
+                captainsList.appendChild(box);
+
+                priceOptions.forEach(price => {
+                    const btn = document.createElement('button');
+                    btn.innerText = `$${price}`;
+                    btn.onclick = () => placeBid(captain.id, price);
+                    document.getElementById(`buttons-${captain.id}`).appendChild(btn);
+                });
+            });
+        }
+
+        function startBidding(player) {
+            if (countdown) clearInterval(countdown);
+            if (bidTimeout) clearTimeout(bidTimeout);
+
+            selectedPlayer = player;
+            currentBid = 0;
+            currentBidder = null;
+            selectedCard.style.backgroundImage = `url(${player.img})`;
+            priceInfo.innerText = 'Starting Price: $0';
+            unsoldMsg.innerText = '';
+
+            // Start 30s timer to begin bid
+            let timeLeft = 30;
+            timer.innerText = `Timer: ${timeLeft}s`;
+            countdown = setInterval(() => {
+                timeLeft--;
+                timer.innerText = `Timer: ${timeLeft}s`;
+                if (timeLeft <= 0) {
+                    clearInterval(countdown);
+                    timer.innerText = `Timer: 0s`;
+                    if (!currentBidder) {
+                        unsoldMsg.innerText = '⛔ No bids placed. Player is UNSOLD.';
+                    }
+                }
+            }, 1000);
+        }
+
+        function placeBid(captainId, price) {
+            const captain = captains.find(c => c.id === captainId);
+            if (price > captain.balance) {
+                alert('Not enough balance!');
+                return;
+            }
+
+            if (price > currentBid) {
+                currentBid = price;
+                currentBidder = captain;
+                priceInfo.innerText = `🔨 Highest Bid: $${currentBid} by ${captain.name}`;
+                unsoldMsg.innerText = '';
+
+                if (countdown) clearInterval(countdown);
+                let timeLeft = 10;
+                timer.innerText = `Timer: ${timeLeft}s`;
+
+                countdown = setInterval(() => {
+                    timeLeft--;
+                    timer.innerText = `Timer: ${timeLeft}s`;
+                    if (timeLeft <= 0) {
+                        clearInterval(countdown);
+                        finalizeBid();
+                    }
+                }, 1000);
+            }
+        }
+
+        function finalizeBid() {
+            if (currentBidder) {
+                currentBidder.balance -= currentBid;
+                document.getElementById(`balance-${currentBidder.id}`).innerText = currentBidder.balance;
+
+                // Remove player from host bucket
+                hostPlayers.splice(hostPlayers.findIndex(p => p.id === selectedPlayer.id), 1);
+                renderHostPlayers();
+                priceInfo.innerText = `✅ SOLD to ${currentBidder.name} for $${currentBid}`;
+            }
+        }
+
+        // Initial Renders
+        renderHostPlayers();
+        renderCaptains();
+    </script>
+</body>
+
+</html>

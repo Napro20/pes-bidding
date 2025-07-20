@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Add Players</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: #0c0f2c;
+            color: white;
+            text-align: center;
+        }
+
+        header {
+            background: #1e2447;
+            padding: 20px;
+        }
+
+        header img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        header span {
+            font-size: 1.5rem;
+            vertical-align: middle;
+        }
+
+        .upload-area {
+            padding: 30px;
+        }
+
+        input[type="file"] {
+            margin: 20px 0;
+        }
+
+        .players-preview {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            padding: 20px;
+        }
+
+        .player-card {
+            background: #1abc9c;
+            border-radius: 10px;
+            padding: 10px;
+            width: 120px;
+        }
+
+        .player-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .buttons {
+            margin: 30px;
+        }
+
+        .buttons button {
+            background-color: #1abc9c;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            color: white;
+            cursor: pointer;
+            border-radius: 8px;
+            margin: 10px;
+            transition: 0.3s;
+        }
+
+        .buttons button:hover {
+            background-color: #16a085;
+        }
+    </style>
+</head>
+
+<body onload="loadHostInfo()">
+    <header>
+        <img id="hostImg" src="" alt="Host">
+        <span id="hostName">Host Name</span>
+    </header>
+
+    <div class="upload-area">
+        <h2>Upload Player Cards</h2>
+        <input type="file" id="playerImages" multiple accept="image/*">
+        <div class="players-preview" id="playersPreview"></div>
+    </div>
+
+    <div class="buttons">
+        <button onclick="goBack()">🔙 Back</button>
+        <button onclick="startBidding()">Start Bidding</button>
+    </div>
+
+    <script>
+        let playerList = [];
+
+        function loadHostInfo() {
+            const hostName = localStorage.getItem("hostName");
+            const hostImage = localStorage.getItem("hostImage");
+
+            if (!hostName || !hostImage) {
+                alert("Host profile missing. Returning to home.");
+                window.location.href = "index.html";
+                return;
+            }
+
+            document.getElementById("hostName").innerText = hostName;
+            document.getElementById("hostImg").src = hostImage;
+        }
+
+        document.getElementById("playerImages").addEventListener("change", function () {
+            const files = Array.from(this.files);
+            const preview = document.getElementById("playersPreview");
+            preview.innerHTML = "";
+            playerList = [];
+
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const base64Image = e.target.result;
+                    playerList.push(base64Image);
+
+                    const card = document.createElement("div");
+                    card.classList.add("player-card");
+
+                    const img = document.createElement("img");
+                    img.src = base64Image;
+
+                    card.appendChild(img);
+                    preview.appendChild(card);
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+
+        function startBidding() {
+            if (playerList.length === 0) {
+                alert("Please upload at least one player card.");
+                return;
+            }
+
+            localStorage.setItem("playerList", JSON.stringify(playerList));
+            window.location.href = "bidding.html";
+        }
+
+        function goBack() {
+            window.location.href = "host.html";
+        }
+    </script>
+</body>
+
+</html>

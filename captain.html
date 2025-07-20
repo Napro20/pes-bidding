@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Create Captain Profile</title>
+    <style>
+        body {
+            background: #0c0f2c;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: #1e2447;
+            padding: 30px 40px;
+            border-radius: 15px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+            width: 320px;
+            text-align: center;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            margin: 12px 0;
+            border-radius: 6px;
+            border: none;
+            font-size: 1rem;
+        }
+
+        button {
+            background-color: #1abc9c;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.1rem;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #16a085;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>Create Captain Profile</h2>
+        <input type="text" id="captainName" placeholder="Enter your name" />
+        <input type="file" id="captainImage" accept="image/*" />
+        <button onclick="createCaptain()">Create Profile</button>
+    </div>
+
+    <script>
+        function createCaptain() {
+            const name = document.getElementById('captainName').value.trim();
+            const fileInput = document.getElementById('captainImage');
+            const file = fileInput.files[0];
+
+            if (!name) {
+                alert('Please enter your name');
+                return;
+            }
+            if (!file) {
+                alert('Please select a profile image');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const imageBase64 = e.target.result;
+
+                // Load existing captains or empty array
+                let captains = JSON.parse(localStorage.getItem('captains')) || [];
+
+                // Generate unique id
+                const id = Date.now();
+
+                // Create new captain object
+                const newCaptain = {
+                    id: id,
+                    name: name,
+                    image: imageBase64,
+                    budget: 200
+                };
+
+                captains.push(newCaptain);
+                localStorage.setItem('captains', JSON.stringify(captains));
+                // Store the current captain for session
+                localStorage.setItem('currentCaptain', JSON.stringify(newCaptain));
+
+                alert(`Welcome ${name}! Your profile is created with $200 budget.`);
+
+                // Redirect to bidding page
+                window.location.href = 'bidding.html';
+            };
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+
+</html>
