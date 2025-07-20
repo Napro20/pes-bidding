@@ -2,201 +2,189 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Bidding Room</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
-      padding: 0;
-      background-color: #f4f4f4;
+      font-family: Arial, sans-serif;
+      background: #1b1b1b;
+      color: #fff;
     }
     header {
-      background-color: #2c3e50;
-      color: white;
-      padding: 1em;
-      text-align: center;
-    }
-    .container {
-      padding: 20px;
-    }
-    .players, .captains {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      margin-top: 20px;
-    }
-    .card, .captain-card {
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      background: #333;
       padding: 10px;
-      width: 180px;
       text-align: center;
     }
-    .card img, .captain-card img {
-      width: 100%;
-      height: 120px;
-      object-fit: cover;
+    main {
+      display: flex;
+      height: calc(100vh - 60px);
+    }
+    .host-panel, .captain-panel {
+      flex: 1;
+      padding: 10px;
+      border-right: 2px solid #555;
+      overflow-y: auto;
+    }
+    .captain-panel {
+      border-right: none;
+    }
+    .card {
+      background: #444;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border-radius: 8px;
+    }
+    .card img {
+      max-width: 100%;
+      height: auto;
       border-radius: 5px;
     }
-    .bidding-area {
-      margin-top: 30px;
-      padding: 20px;
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    .card h3 {
+      margin: 5px 0;
     }
-    button {
+    .start-btn, .bid-btn {
+      margin-top: 10px;
       padding: 8px 16px;
-      background-color: #3498db;
-      color: white;
       border: none;
-      border-radius: 4px;
+      background: #28a745;
+      color: #fff;
       cursor: pointer;
-      margin: 5px;
+      border-radius: 5px;
     }
-    button:disabled {
-      background-color: #bdc3c7;
-      cursor: not-allowed;
+    .bid-btn {
+      background: #007bff;
     }
-    .bid-buttons {
-      margin-top: 10px;
+    .inactive {
+      opacity: 0.5;
+      pointer-events: none;
     }
-    .purchased {
-      margin-top: 10px;
+    .notice {
+      background: #ffcc00;
+      color: #000;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Bidding Room</h1>
-  </header>
-  <div class="container">
-    <h2>Uploaded Player Cards (Host Only)</h2>
-    <div class="players" id="playerList"></div>
-
-    <div class="bidding-area">
-      <h2>Live Bidding Area</h2>
-      <div id="bidImageArea"></div>
-      <p id="biddingStatus">Waiting for captains to join and press Start...</p>
-    </div>
-
-    <h2>Captains</h2>
-    <div class="captains" id="captainList"></div>
+<header>
+  <h1>eFootball Bidding Room</h1>
+</header>
+<main>
+  <div class="host-panel">
+    <h2>Host - Player Bucket</h2>
+    <div id="playerBucket"></div>
+    <button class="start-btn" onclick="hostStartBidding()">Start Bidding</button>
   </div>
 
-  <script>
-    const currentUser = JSON.parse(localStorage.getItem('currentUser')) || { type: 'host', id: 'host1' };
-    const allCaptains = JSON.parse(localStorage.getItem('captains')) || [];
-    const allPlayers = JSON.parse(localStorage.getItem('players')) || [];
-    const captainReady = JSON.parse(localStorage.getItem('captainReady')) || {};
+  <div class="captain-panel">
+    <h2>Captains Joined</h2>
+    <div id="captainList"></div>
+    <div id="biddingArea"></div>
+  </div>
+</main>
 
-    const playerListDiv = document.getElementById('playerList');
-    const captainListDiv = document.getElementById('captainList');
-    const bidImageArea = document.getElementById('bidImageArea');
-    const biddingStatus = document.getElementById('biddingStatus');
+<script>
+  let isHost = localStorage.getItem('role') === 'host';
+  let isCaptain = localStorage.getItem('role') === 'captain';
+  let username = localStorage.getItem('username') || 'Guest';
+  let allCaptains = JSON.parse(localStorage.getItem('captains') || '[]');
+  let playerCards = JSON.parse(localStorage.getItem('playerCards') || '[]');
+  let biddingStartedBy = JSON.parse(localStorage.getItem('biddingStartedBy') || '[]');
+  let currentBidCard = localStorage.getItem('currentBidCard') || null;
 
-    // Show uploaded players (host side only)
-    if (currentUser.type === 'host') {
-      if (allPlayers.length === 0) {
-        playerListDiv.innerHTML = '<p>No players uploaded yet.</p>';
-      } else {
-        allPlayers.forEach((player, idx) => {
-          const card = document.createElement('div');
-          card.className = 'card';
-          card.innerHTML = `
-            <img src="${player.img}" alt="Player">
-            <p>${player.name}</p>
-            <button onclick="selectForBid(${idx})">Select for Bidding</button>
-          `;
-          playerListDiv.appendChild(card);
-        });
-      }
+  function save(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+
+  function renderHostPanel() {
+    const bucket = document.getElementById('playerBucket');
+    bucket.innerHTML = '';
+    playerCards.forEach((card, index) => {
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `<img src="${card.image}" alt="Player"><h3>${card.name}</h3>`;
+      div.onclick = () => {
+        if (biddingStartedBy.length === allCaptains.length && allCaptains.length > 0) {
+          localStorage.setItem('currentBidCard', JSON.stringify(card));
+          window.location.reload();
+        } else {
+          alert('Wait until all captains have clicked Start Bidding.');
+        }
+      };
+      bucket.appendChild(div);
+    });
+  }
+
+  function renderCaptainPanel() {
+    const list = document.getElementById('captainList');
+    list.innerHTML = '';
+    if (allCaptains.length === 0) {
+      list.innerHTML = '<div class="notice">⚠ No Captains Joined Yet</div>';
     } else {
-      playerListDiv.style.display = 'none';
-    }
-
-    // Show dynamic captain list
-    function renderCaptains() {
-      captainListDiv.innerHTML = '';
-      if (allCaptains.length === 0) {
-        captainListDiv.innerHTML = '<p>No captains have joined yet.</p>';
-        return;
-      }
-      allCaptains.forEach(cap => {
+      allCaptains.forEach(captain => {
         const div = document.createElement('div');
-        div.className = 'captain-card';
-        div.innerHTML = `
-          <h4>${cap.name}</h4>
-          <p>ID: ${cap.id}</p>
-          <button onclick="markReady('${cap.id}')" ${currentUser.id !== cap.id ? 'disabled' : ''}>Start Bidding</button>
-          <div class="bid-buttons">
-            <button onclick="placeBid('${cap.id}', 10)" ${currentUser.id !== cap.id ? 'disabled' : ''}>$10</button>
-            <button onclick="placeBid('${cap.id}', 20)" ${currentUser.id !== cap.id ? 'disabled' : ''}>$20</button>
-            <button onclick="placeBid('${cap.id}', 30)" ${currentUser.id !== cap.id ? 'disabled' : ''}>$30</button>
-          </div>
-          <div class="purchased" id="purchased-${cap.id}"><strong>Purchased:</strong></div>
-        `;
-        captainListDiv.appendChild(div);
+        div.className = 'card';
+        div.innerHTML = `<h3>${captain}</h3>`;
+        list.appendChild(div);
       });
     }
+  }
 
-    renderCaptains();
-
-    // Each captain presses start
-    function markReady(id) {
-      captainReady[id] = true;
-      localStorage.setItem('captainReady', JSON.stringify(captainReady));
-      checkAllReady();
-    }
-
-    // Only allow host to select when all captains are ready
-    function checkAllReady() {
-      const allReady = allCaptains.length > 0 && allCaptains.every(c => captainReady[c.id]);
-      if (allReady) {
-        biddingStatus.innerText = 'All captains ready. Host can select a player to start bidding.';
-      } else {
-        biddingStatus.innerText = 'Waiting for all captains to press Start...';
-      }
-    }
-
-    checkAllReady();
-
-    function selectForBid(index) {
-      const allReady = allCaptains.length > 0 && allCaptains.every(c => captainReady[c.id]);
-      if (!allReady) {
-        alert('Not all captains are ready.');
-        return;
-      }
-      const player = allPlayers[index];
-      localStorage.setItem('currentBidPlayer', JSON.stringify(player));
-      renderBidArea();
-    }
-
-    function renderBidArea() {
-      const player = JSON.parse(localStorage.getItem('currentBidPlayer'));
-      if (!player) return;
-      bidImageArea.innerHTML = `
-        <img src="${player.img}" alt="Bidding Player" style="width:150px">
-        <p>${player.name}</p>
+  function renderBiddingArea() {
+    const area = document.getElementById('biddingArea');
+    area.innerHTML = '';
+    if (currentBidCard) {
+      const card = JSON.parse(currentBidCard);
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.innerHTML = `
+        <img src="${card.image}" alt="Player">
+        <h3>${card.name}</h3>
+        <div>
+          ${isCaptain ? `<button class="bid-btn">Bid $50</button>` : ''}
+        </div>
       `;
+      area.appendChild(div);
     }
+  }
 
-    function placeBid(captainId, amount) {
-      const player = JSON.parse(localStorage.getItem('currentBidPlayer'));
-      if (!player) return alert('No player selected for bidding.');
+  function hostStartBidding() {
+    alert('Waiting for all captains to click Start Bidding...');
+  }
 
-      let purchased = JSON.parse(localStorage.getItem(`purchased-${captainId}`)) || [];
-      purchased.push(player);
-      localStorage.setItem(`purchased-${captainId}`, JSON.stringify(purchased));
-
-      document.getElementById(`purchased-${captainId}`).innerHTML += `<p>${player.name}</p>`;
-      localStorage.removeItem('currentBidPlayer');
-      bidImageArea.innerHTML = '';
+  function captainStart() {
+    if (!biddingStartedBy.includes(username)) {
+      biddingStartedBy.push(username);
+      save('biddingStartedBy', biddingStartedBy);
     }
+    window.location.reload();
+  }
 
-    renderBidArea();
-  </script>
+  // First-time captain joining logic
+  if (isCaptain && !allCaptains.includes(username)) {
+    allCaptains.push(username);
+    save('captains', allCaptains);
+  }
+
+  // Initial render
+  if (isHost) renderHostPanel();
+  renderCaptainPanel();
+  renderBiddingArea();
+
+  // Captain view: Start Bidding button
+  if (isCaptain && !biddingStartedBy.includes(username)) {
+    const startBtn = document.createElement('button');
+    startBtn.className = 'start-btn';
+    startBtn.textContent = 'Start Bidding';
+    startBtn.onclick = captainStart;
+    document.querySelector('.captain-panel').appendChild(startBtn);
+  }
+</script>
 </body>
 </html>
