@@ -2,372 +2,65 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
-    <title>Bid Room</title>
+    <meta charset="UTF-8">
+    <title>eFootball Bidding Simulator</title>
     <style>
         body {
-            font-family: Arial;
-            background: #121212;
-            color: white;
             margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: #0c0f2c;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            text-align: center;
         }
 
         h1 {
-            text-align: center;
-            padding: 10px;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
         }
 
-        #main {
-            display: flex;
-            justify-content: space-between;
-            padding: 20px;
-        }
-
-        .host,
-        .captains {
-            width: 30%;
-        }
-
-        .host h2,
-        .captains h2 {
-            text-align: center;
-        }
-
-        .player-card {
-            width: 100px;
-            height: 120px;
-            margin: 10px auto;
-            border: 2px solid white;
-            cursor: pointer;
-            background-size: cover;
-            background-position: center;
-        }
-
-        #selectedCard {
-            width: 150px;
-            height: 180px;
-            margin: 20px auto;
-            border: 3px solid gold;
-            background-size: cover;
-            background-position: center;
-        }
-
-        .price-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 5px;
-            margin-top: 10px;
-        }
-
-        .price-buttons button {
-            padding: 5px 10px;
-            background: #4caf50;
-            color: white;
+        .button-group button {
+            background-color: #1abc9c;
             border: none;
-            border-radius: 4px;
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 1.2rem;
+            color: white;
             cursor: pointer;
+            border-radius: 10px;
+            transition: 0.3s ease;
         }
 
-        .price-buttons button:disabled {
-            background: #666;
-            cursor: not-allowed;
-        }
-
-        .captain-box {
-            margin-bottom: 15px;
-            border: 1px solid white;
-            padding: 10px;
-            text-align: center;
-        }
-
-        .balance {
-            color: gold;
-        }
-
-        #timer {
-            font-size: 24px;
-            color: orange;
-            text-align: center;
-            margin-top: 10px;
-        }
-
-        .unsold {
-            text-align: center;
-            color: red;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-
-        .bucket-title {
-            margin-top: 20px;
-            font-weight: bold;
-            text-align: center;
-            border-bottom: 1px solid white;
-            padding-bottom: 6px;
-        }
-
-        .player-bucket {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .player-bucket .player-card {
-            width: 60px;
-            height: 75px;
-            border: 2px solid gold;
-            cursor: default;
+        .button-group button:hover {
+            background-color: #16a085;
         }
     </style>
 </head>
 
 <body>
-
-    <h1>🏟️ Bidding Room</h1>
-
-    <div id="main">
-        <!-- Host Section -->
-        <div class="host">
-            <h2>🎮 Host's Player Bucket</h2>
-            <div id="hostBucket"></div>
-            <div id="selectedCard"></div>
-            <div id="timer">Timer: --</div>
-            <div id="priceInfo" style="text-align:center; margin-top:10px;"></div>
-            <div id="unsoldMsg" class="unsold"></div>
-        </div>
-
-        <!-- Captains -->
-        <div class="captains">
-            <h2>👑 Captains</h2>
-            <div id="captainsList"></div>
-
-            <div class="bucket-title">🎯 Your Purchased Players</div>
-            <div id="captainBucket" class="player-bucket"></div>
+    <div class="container">
+        <h1>⚽ eFootball Bidding Simulator</h1>
+        <div class="button-group">
+            <button onclick="goToHost()">Create Host Profile</button>
+            <button onclick="goToCaptain()">Create Captain Profile</button>
         </div>
     </div>
 
     <script>
-        // Simulate current logged-in user type and id:
-        // change to 'host' or 'captain' and if captain, set their id
-        const currentUser = {
-            role: 'captain', // 'host' or 'captain'
-            id: 2            // relevant if role is 'captain'
-        };
-
-        // Players initially in host bucket (simulate fetched data)
-        let hostPlayers = [
-            { id: 1, img: 'https://via.placeholder.com/100x120?text=P1', name: 'Player 1' },
-            { id: 2, img: 'https://via.placeholder.com/100x120?text=P2', name: 'Player 2' },
-            { id: 3, img: 'https://via.placeholder.com/100x120?text=P3', name: 'Player 3' }
-        ];
-
-        // Captains data with budgets and buckets of purchased players
-        let captains = [
-            { id: 1, name: 'Captain A', balance: 200, bucket: [] },
-            { id: 2, name: 'Captain B', balance: 200, bucket: [] },
-            { id: 3, name: 'Captain C', balance: 200, bucket: [] }
-        ];
-
-        // Price options for bidding buttons
-        const priceOptions = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
-
-        // Elements
-        const hostBucketDiv = document.getElementById('hostBucket');
-        const captainsListDiv = document.getElementById('captainsList');
-        const selectedCardDiv = document.getElementById('selectedCard');
-        const timerDiv = document.getElementById('timer');
-        const priceInfoDiv = document.getElementById('priceInfo');
-        const unsoldMsgDiv = document.getElementById('unsoldMsg');
-        const captainBucketDiv = document.getElementById('captainBucket');
-
-        // Bidding state variables
-        let selectedPlayer = null;
-        let currentBid = 0;
-        let currentBidder = null;
-        let countdown = null;
-        let countdownTime = 0;
-
-        // Render the host's bucket of players (clickable only for host)
-        function renderHostPlayers() {
-            hostBucketDiv.innerHTML = '';
-            hostPlayers.forEach(player => {
-                const div = document.createElement('div');
-                div.className = 'player-card';
-                div.style.backgroundImage = `url(${player.img})`;
-                div.title = player.name;
-                if (currentUser.role === 'host') {
-                    div.style.cursor = 'pointer';
-                    div.onclick = () => startBidding(player);
-                } else {
-                    div.style.cursor = 'default';
-                }
-                hostBucketDiv.appendChild(div);
-            });
+        function goToHost() {
+            window.location.href = "host.html";
         }
 
-        // Render all captains: name, balance, buttons (only for current captain buttons enabled)
-        function renderCaptains() {
-            captainsListDiv.innerHTML = '';
-
-            captains.forEach(captain => {
-                const box = document.createElement('div');
-                box.className = 'captain-box';
-
-                let priceButtonsHTML = '';
-                if (currentUser.role === 'captain' && currentUser.id === captain.id && selectedPlayer) {
-                    // Enable buttons only for this captain and if a player is selected
-                    priceButtonsHTML = '<div class="price-buttons">';
-                    priceOptions.forEach(price => {
-                        // Disable if price > captain balance or price <= currentBid
-                        const disabled = price > captain.balance || price <= currentBid ? 'disabled' : '';
-                        priceButtonsHTML += `<button ${disabled} onclick="placeBid(${captain.id}, ${price})">$${price}</button>`;
-                    });
-                    priceButtonsHTML += '</div>';
-                } else {
-                    // Others see buttons disabled (or no buttons)
-                    priceButtonsHTML = '<div class="price-buttons">';
-                    priceOptions.forEach(price => {
-                        priceButtonsHTML += `<button disabled>$${price}</button>`;
-                    });
-                    priceButtonsHTML += '</div>';
-                }
-
-                box.innerHTML = `
-        <strong>${captain.name}</strong><br>
-        💰 <span class="balance" id="balance-${captain.id}">${captain.balance}</span>
-        ${priceButtonsHTML}
-      `;
-                captainsListDiv.appendChild(box);
-            });
+        function goToCaptain() {
+            window.location.href = "captain.html";
         }
-
-        // Render captain's own purchased players bucket
-        function renderCaptainBucket() {
-            captainBucketDiv.innerHTML = '';
-            if (currentUser.role !== 'captain') return;
-            const captain = captains.find(c => c.id === currentUser.id);
-            if (!captain) return;
-
-            captain.bucket.forEach(player => {
-                const div = document.createElement('div');
-                div.className = 'player-card';
-                div.style.backgroundImage = `url(${player.img})`;
-                div.title = player.name;
-                captainBucketDiv.appendChild(div);
-            });
-        }
-
-        // Start bidding on selected player (host only)
-        function startBidding(player) {
-            if (currentUser.role !== 'host') return; // only host can select player
-
-            if (countdown) clearInterval(countdown);
-
-            selectedPlayer = player;
-            currentBid = 0;
-            currentBidder = null;
-            countdownTime = 30;
-
-            selectedCardDiv.style.backgroundImage = `url(${player.img})`;
-            priceInfoDiv.textContent = 'Starting Price: $0';
-            unsoldMsgDiv.textContent = '';
-            timerDiv.textContent = `Timer: ${countdownTime}s`;
-
-            renderCaptains();
-
-            countdown = setInterval(() => {
-                countdownTime--;
-                timerDiv.textContent = `Timer: ${countdownTime}s`;
-
-                if (countdownTime <= 0) {
-                    clearInterval(countdown);
-                    if (!currentBidder) {
-                        unsoldMsgDiv.textContent = '⛔ No bids placed. Player is UNSOLD.';
-                        priceInfoDiv.textContent = '';
-                        selectedCardDiv.style.backgroundImage = '';
-                        selectedPlayer = null;
-                        renderCaptains();
-                        renderHostPlayers();
-                    } else {
-                        finalizeBid();
-                    }
-                }
-            }, 1000);
-        }
-
-        // Place bid (only captain can call)
-        function placeBid(captainId, price) {
-            if (currentUser.role !== 'captain') return;
-            if (currentUser.id !== captainId) {
-                alert("You can only bid from your own buttons!");
-                return;
-            }
-            const captain = captains.find(c => c.id === captainId);
-            if (!captain) return;
-
-            if (price > captain.balance) {
-                alert("Insufficient balance!");
-                return;
-            }
-
-            if (price <= currentBid) {
-                alert(`Your bid must be higher than current bid: $${currentBid}`);
-                return;
-            }
-
-            currentBid = price;
-            currentBidder = captain;
-            priceInfoDiv.textContent = `🔨 Highest Bid: $${currentBid} by ${captain.name}`;
-            unsoldMsgDiv.textContent = '';
-
-            countdownTime = 10; // reset timer to 10 seconds on bid
-            timerDiv.textContent = `Timer: ${countdownTime}s`;
-
-            renderCaptains();
-
-            if (countdown) clearInterval(countdown);
-            countdown = setInterval(() => {
-                countdownTime--;
-                timerDiv.textContent = `Timer: ${countdownTime}s`;
-                if (countdownTime <= 0) {
-                    clearInterval(countdown);
-                    finalizeBid();
-                }
-            }, 1000);
-        }
-
-        // Finalize the bid - deduct balance, assign player to captain bucket, remove from host bucket
-        function finalizeBid() {
-            if (!currentBidder || !selectedPlayer) return;
-
-            currentBidder.balance -= currentBid;
-            currentBidder.bucket.push(selectedPlayer);
-
-            // Remove player from host bucket
-            hostPlayers = hostPlayers.filter(p => p.id !== selectedPlayer.id);
-
-            priceInfoDiv.textContent = `✅ SOLD to ${currentBidder.name} for $${currentBid}`;
-            unsoldMsgDiv.textContent = '';
-            selectedCardDiv.style.backgroundImage = '';
-            timerDiv.textContent = 'Timer: --';
-
-            selectedPlayer = null;
-            currentBid = 0;
-            currentBidder = null;
-
-            renderHostPlayers();
-            renderCaptains();
-            renderCaptainBucket();
-        }
-
-        // Initial render calls
-        renderHostPlayers();
-        renderCaptains();
-        renderCaptainBucket();
-
     </script>
 </body>
 
