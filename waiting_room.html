@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>eFootball Waiting Room</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0a0a23;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #1f1f3a;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .time-box {
+            text-align: right;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .form-box {
+            margin-bottom: 30px;
+            background: #2c2c54;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .form-box input {
+            padding: 10px;
+            margin: 10px 5px;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .form-box button {
+            background-color: #28a745;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .captains-list {
+            margin-bottom: 30px;
+        }
+
+        .captains-list h3 {
+            margin-bottom: 10px;
+        }
+
+        .captain-card {
+            display: inline-block;
+            background: #39396c;
+            padding: 15px;
+            margin: 5px;
+            border-radius: 10px;
+        }
+
+        .cards-section img {
+            height: 100px;
+            margin: 5px;
+            border-radius: 5px;
+        }
+
+        .host-section {
+            margin-top: 30px;
+        }
+
+        .host-section button {
+            background-color: #ff5e5e;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>⚽ eFootball Bidding Waiting Room</h1>
+    </header>
+
+    <div class="container">
+        <div class="time-box" id="liveTime">Loading time...</div>
+
+        <div class="form-box">
+            <h2>Create Captain Profile</h2>
+            <input type="text" id="captainName" placeholder="Enter Captain Name" required />
+            <button onclick="joinAsCaptain()">Start Bidding</button>
+        </div>
+
+        <div class="captains-list">
+            <h3>Joined Captains:</h3>
+            <div id="captainArea">No captain joined yet.</div>
+        </div>
+
+        <div class="host-section">
+            <h2>Host View – Uploaded Player Cards</h2>
+            <div class="cards-section" id="cardBucket">
+                <!-- Host uploaded cards will appear here -->
+            </div>
+            <button onclick="startBidding()">Start Bidding</button>
+        </div>
+    </div>
+
+    <script>
+        const captainArea = document.getElementById('captainArea');
+        const cardBucket = document.getElementById('cardBucket');
+
+        let captains = [];
+        let cards = [
+            'https://via.placeholder.com/100x150?text=Player1',
+            'https://via.placeholder.com/100x150?text=Player2',
+            'https://via.placeholder.com/100x150?text=Player3'
+        ];
+
+        function updateCaptainDisplay() {
+            if (captains.length === 0) {
+                captainArea.innerHTML = 'No captain joined yet.';
+            } else {
+                captainArea.innerHTML = captains.map(name => `
+          <div class="captain-card">
+            <strong>${name}</strong>
+          </div>
+        `).join('');
+            }
+        }
+
+        function joinAsCaptain() {
+            const name = document.getElementById('captainName').value.trim();
+            if (name) {
+                captains.push(name);
+                updateCaptainDisplay();
+                localStorage.setItem('captains', JSON.stringify(captains));
+                alert(`${name} joined as captain!`);
+            }
+        }
+
+        function loadCards() {
+            cards.forEach(src => {
+                const img = document.createElement('img');
+                img.src = src;
+                cardBucket.appendChild(img);
+            });
+        }
+
+        function startBidding() {
+            if (captains.length === 0) {
+                alert("Wait until at least one captain joins.");
+                return;
+            }
+
+            // Redirect all users (simulated via localStorage flag)
+            localStorage.setItem('biddingStarted', 'yes');
+            window.location.href = 'bidding.html';
+        }
+
+        function loadFromLocalStorage() {
+            const savedCaptains = JSON.parse(localStorage.getItem('captains')) || [];
+            if (savedCaptains.length > 0) {
+                captains = savedCaptains;
+                updateCaptainDisplay();
+            }
+        }
+
+        function showLiveTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString();
+            document.getElementById('liveTime').textContent = `Live Time: ${timeString}`;
+        }
+
+        setInterval(showLiveTime, 1000);
+        showLiveTime();
+        loadCards();
+        loadFromLocalStorage();
+    </script>
+
+</body>
+
+</html>
